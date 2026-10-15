@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KioscoPro | Gestión de Ventas e Inventario</title>
+<meta name="description" content="Sistema de punto de venta e inventario para pequeños comercios y kioscos." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: {
+          brand: {
+            50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',
+            500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81'
+          },
+          accent: {
+            400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed'
+          }
+        },
+        keyframes: {
+          popIn: { '0%':{opacity:'0',transform:'scale(.92) translateY(10px)'}, '100%':{opacity:'1',transform:'scale(1) translateY(0)'} },
+          fadeIn: { '0%':{opacity:'0'}, '100%':{opacity:'1'} },
+          slideUp: { '0%':{opacity:'0',transform:'translateY(24px)'}, '100%':{opacity:'1',transform:'translateY(0)'} },
+          bounceAdd: { '0%':{transform:'scale(1)'}, '35%':{transform:'scale(1.18)'}, '70%':{transform:'scale(.95)'}, '100%':{transform:'scale(1)'} },
+          floaty: { '0%,100%':{transform:'translateY(0)'}, '50%':{transform:'translateY(-6px)'} }
+        },
+        animation: {
+          popIn: 'popIn .35s cubic-bezier(.22,1,.36,1)',
+          fadeIn: 'fadeIn .3s ease-out',
+          slideUp: 'slideUp .45s cubic-bezier(.22,1,.36,1)',
+          bounceAdd: 'bounceAdd .5s ease',
+          floaty: 'floaty 3s ease-in-out infinite'
+        },
+        boxShadow: {
+          soft: '0 10px 40px -12px rgba(15,23,42,.18)',
+          glow: '0 0 0 1px rgba(99,102,241,.15), 0 18px 50px -12px rgba(99,102,241,.45)'
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  :root { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(99,102,241,.35); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,.6); }
+  .glass { backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%); }
+  .brand-gradient { background-image: linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#d946ef 100%); }
+  .text-gradient { background: linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .card-hover { transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease, border-color .28s ease; }
+  .card-hover:hover { transform: translateY(-5px); }
+  .modal-backdrop { animation: fadeIn .25s ease-out; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .shimmer { background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+  input[type=file]::file-selector-button { display: none; }
+</style>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-800 dark:bg-[#0b1120] dark:text-slate-100 transition-colors duration-500">
+
+  <!-- ============ FONDO DECORATIVO ============ -->
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -top-40 -left-32 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 h-[28rem] w-[28rem] rounded-full bg-fuchsia-500/15 blur-3xl"></div>
+    <div class="absolute bottom-0 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-violet-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- ============ NAVBAR ============ -->
+  <header class="sticky top-0 z-40 border-b border-slate-200/70 bg-white/70 glass dark:border-white/10 dark:bg-slate-950/60">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3">
+        <div class="grid h-11 w-11 place-items-center rounded-2xl brand-gradient shadow-glow">
+          <i data-lucide="store" class="h-6 w-6 text-white"></i>
+        </div>
+        <div class="leading-tight">
+          <h1 class="text-lg font-extrabold tracking-tight sm:text-xl">Kiosco<span class="text-gradient">Pro</span></h1>
+          <p class="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">Ventas, inventario y estadísticas</p>
+        </div>
+      </div>
+
+      <!-- Navegación -->
+      <nav class="hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-white/60 p-1 md:flex dark:border-white/10 dark:bg-white/5">
+        <button data-nav="pos" class="nav-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition">
+          <i data-lucide="scan-line" class="h-4 w-4"></i> Punto de Venta
+        </button>
+        <button data-nav="products" class="nav-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition">
+          <i data-lucide="package" class="h-4 w-4"></i> Productos
+        </button>
+        <button data-nav="stats" class="nav-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition">
+          <i data-lucide="bar-chart-3" class="h-4 w-4"></i> Estadísticas
+        </button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" title="Cambiar tema" class="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/60 text-slate-600 transition hover:scale-105 hover:text-brand-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:text-brand-300">
+          <i data-lucide="moon" class="h-5 w-5" id="themeIcon"></i>
+        </button>
+        <button id="openCartMobile" title="Ver cuenta" class="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/60 text-slate-600 transition hover:scale-105 lg:hidden dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          <i data-lucide="shopping-bag" class="h-5 w-5"></i>
+          <span id="cartBadgeMobile" class="absolute -right-1 -top-1 hidden min-w-[20px] rounded-full bg-brand-600 px-1 text-center text-[11px] font-bold text-white">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Nav móvil -->
+    <div class="flex gap-1 overflow-x-auto border-t border-slate-200/60 px-3 py-2 no-scrollbar md:hidden dark:border-white/10">
+      <button data-nav="pos" class="nav-btn-m flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition"><i data-lucide="scan-line" class="h-4 w-4"></i> Vender</button>
+      <button data-nav="products" class="nav-btn-m flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition"><i data-lucide="package" class="h-4 w-4"></i> Productos</button>
+      <button data-nav="stats" class="nav-btn-m flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition"><i data-lucide="bar-chart-3" class="h-4 w-4"></i> Estadísticas</button>
+    </div>
+  </header>
+
+  <!-- ============ CONTENIDO ============ -->
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+
+    <!-- ---------- VISTA: PUNTO DE VENTA ---------- -->
+    <section id="view-pos" class="view animate-fadeIn">
+      <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Punto de Venta</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Tocá un producto para sumarlo a la cuenta del día.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-2 shadow-soft dark:border-white/10 dark:bg-white/5">
+            <i data-lucide="banknote" class="h-5 w-5 text-brand-500"></i>
+            <div class="leading-tight">
+              <p class="text-[11px] font-medium uppercase tracking-wide text-slate-400">Caja de hoy</p>
+              <p id="headerTodayTotal" class="text-base font-extrabold">$ 0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <!-- Grilla de productos -->
+        <div>
+          <div class="mb-4 flex items-center gap-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+              <input id="posSearch" type="text" placeholder="Buscar producto..." class="w-full rounded-2xl border border-slate-200/80 bg-white/70 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-500/10 dark:border-white/10 dark:bg-white/5 dark:placeholder:text-slate-500" />
+            </div>
+            <button id="posAddProductBtn" class="flex shrink-0 items-center gap-2 rounded-2xl brand-gradient px-4 py-2.5 text-sm font-bold text-white shadow-glow transition hover:scale-[1.03] active:scale-95">
+              <i data-lucide="plus" class="h-4 w-4"></i><span class="hidden sm:inline">Nuevo</span>
+            </button>
+          </div>
+
+          <div id="posGrid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4"></div>
+        </div>
+
+        <!-- Panel de cuenta (desktop) -->
+        <aside class="hidden lg:block">
+          <div class="sticky top-24">
+            <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 shadow-soft dark:border-white/10 dark:bg-white/5">
+              <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-white/10">
+                <div class="flex items-center gap-2 font-extrabold">
+                  <i data-lucide="receipt" class="h-5 w-5 text-brand-500"></i> Cuenta del día
+                </div>
+                <button id="clearCartDesktop" class="text-xs font-semibold text-slate-400 transition hover:text-rose-500">Vaciar</button>
+              </div>
+              <div id="cartListDesktop" class="max-h-[46vh] overflow-y-auto px-5 py-2"></div>
+              <div class="border-t border-slate-100 px-5 py-4 dark:border-white/10">
+                <div class="mb-1 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                  <span>Artículos</span><span id="cartCountDesktop">0</span>
+                </div>
+                <div class="mb-4 flex items-end justify-between">
+                  <span class="text-sm font-semibold">Total</span>
+                  <span id="cartTotalDesktop" class="text-2xl font-extrabold text-gradient">$ 0</span>
+                </div>
+                <button id="checkoutBtn" class="flex w-full items-center justify-center gap-2 rounded-2xl brand-gradient py-3 text-sm font-bold text-white shadow-glow transition hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40">
+                  <i data-lucide="check-circle-2" class="h-5 w-5"></i> Cobrar venta
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ---------- VISTA: PRODUCTOS ---------- -->
+    <section id="view-products" class="view hidden">
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Inventario de Productos</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Administrá tu catálogo. Agregá, editá o eliminá artículos.</p>
+        </div>
+        <button id="openAddProduct" class="flex items-center justify-center gap-2 rounded-2xl brand-gradient px-5 py-3 text-sm font-bold text-white shadow-glow transition hover:scale-[1.03] active:scale-95">
+          <i data-lucide="plus-circle" class="h-5 w-5"></i> Agregar producto
+        </button>
+      </div>
+
+      <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-4 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-brand-500/10 text-brand-500"><i data-lucide="package" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statProductsCount">0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Productos</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-4 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500"><i data-lucide="trending-up" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statAvgPrice">$ 0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Precio promedio</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-4 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-amber-500/10 text-amber-500"><i data-lucide="flame" class="h-5 w-5"></i></div>
+          <p class="truncate text-lg font-extrabold" id="statTopProduct">—</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Más vendido</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-4 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-2 grid h-9 w-9 place-items-center rounded-xl bg-fuchsia-500/10 text-fuchsia-500"><i data-lucide="award" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statMaxPrice">$ 0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Precio máx.</p>
+        </div>
+      </div>
+
+      <div id="productsGrid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4"></div>
+    </section>
+
+    <!-- ---------- VISTA: ESTADÍSTICAS ---------- -->
+    <section id="view-stats" class="view hidden">
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Panel de Estadísticas</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Visualizá el rendimiento de tu comercio en el tiempo.</p>
+        </div>
+        <button id="openTopModal" class="flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-5 py-3 text-sm font-bold text-slate-700 shadow-soft transition hover:scale-[1.03] hover:text-brand-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+          <i data-lucide="trophy" class="h-5 w-5 text-amber-500"></i> Ver Top Ventas
+        </button>
+      </div>
+
+      <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-5 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-brand-500/10 text-brand-500"><i data-lucide="calendar-check" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statTodayRevenue">$ 0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Ganancia de hoy</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-5 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500"><i data-lucide="wallet" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statTotalRevenue">$ 0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Total histórico</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-5 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-violet-500/10 text-violet-500"><i data-lucide="line-chart" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statAvgDay">$ 0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Promedio por día</p>
+        </div>
+        <div class="rounded-3xl border border-slate-200/80 bg-white/70 p-5 shadow-soft dark:border-white/10 dark:bg-white/5">
+          <div class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500"><i data-lucide="trending-up" class="h-5 w-5"></i></div>
+          <p class="text-2xl font-extrabold" id="statBestDay">—</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Mejor día</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-soft sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h3 class="font-extrabold">Ventas de los últimos 7 días</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Ganancias diarias registradas</p>
+            </div>
+            <span class="rounded-full bg-brand-500/10 px-3 py-1 text-xs font-bold text-brand-600 dark:text-brand-300">7 días</span>
+          </div>
+          <div class="h-[300px]"><canvas id="salesChart"></canvas></div>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-soft sm:p-6 dark:border-white/10 dark:bg-white/5">
+          <div class="mb-4 flex items-center gap-2">
+            <i data-lucide="flame" class="h-5 w-5 text-amber-500"></i>
+            <h3 class="font-extrabold">Top Productos</h3>
+          </div>
+          <div id="topProductsMini" class="space-y-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="mt-16 border-t border-slate-200/70 bg-white/60 glass dark:border-white/10 dark:bg-slate-950/50">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <div class="flex flex-col items-center gap-6 text-center">
+        <div class="flex items-center gap-3">
+          <div class="grid h-11 w-11 place-items-center rounded-2xl brand-gradient shadow-glow">
+            <i data-lucide="store" class="h-6 w-6 text-white"></i>
+          </div>
+          <div class="text-left leading-tight">
+            <h1 class="text-lg font-extrabold tracking-tight">Kiosco<span class="text-gradient">Pro</span></h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Tu comercio, bajo control.</p>
+          </div>
+        </div>
+
+        <p class="max-w-md text-sm text-slate-500 dark:text-slate-400">
+          Sistema de gestión de ventas, inventario y estadísticas para pequeños comercios y kioscos.
+        </p>
+
+        <div class="flex items-center gap-3">
+          <a href="https://instagram.com/tiendavirtus.oficial" target="_blank" rel="noopener noreferrer" title="Instagram: tiendavirtus.oficial"
+             class="group flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-2.5 text-sm font-semibold shadow-soft transition hover:-translate-y-1 hover:border-pink-400/60 hover:text-pink-500 dark:border-white/10 dark:bg-white/5">
+            <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" aria-hidden="true">
+              <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="1.9"/>
+              <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.9"/>
+              <circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/>
+            </svg>
+            <span class="hidden sm:inline">tiendavirtus.oficial</span>
+          </a>
+
+          <a href="https://youtube.com/@tiendavirtus" target="_blank" rel="noopener noreferrer" title="YouTube: tiendavirtus"
+             class="group flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-2.5 text-sm font-semibold shadow-soft transition hover:-translate-y-1 hover:border-red-500/60 hover:text-red-600 dark:border-white/10 dark:bg-white/5">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5" aria-hidden="true">
+              <path d="M23 12s0-3.6-.46-5.32a2.78 2.78 0 0 0-1.95-1.96C18.87 4.25 12 4.25 12 4.25s-6.87 0-8.59.47A2.78 2.78 0 0 0 1.46 6.68C1 8.4 1 12 1 12s0 3.6.46 5.32a2.78 2.78 0 0 0 1.95 1.96c1.72.47 8.59.47 8.59.47s6.87 0 8.59-.47a2.78 2.78 0 0 0 1.95-1.96C23 15.6 23 12 23 12Zm-13 3.27V8.73L15.5 12 10 15.27Z"/>
+            </svg>
+            <span class="hidden sm:inline">tiendavirtus</span>
+          </a>
+
+          <a href="https://github.com/xalan007x" target="_blank" rel="noopener noreferrer" title="GitHub: xalan007x"
+             class="group flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-2.5 text-sm font-semibold shadow-soft transition hover:-translate-y-1 hover:border-slate-500/60 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:hover:text-white">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5" aria-hidden="true">
+              <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.57 2.34 1.12 2.91.85.09-.66.35-1.12.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.36 9.36 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
+            </svg>
+            <span class="hidden sm:inline">xalan007x</span>
+          </a>
+        </div>
+
+        <div class="h-px w-full max-w-md bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-white/10"></div>
+        <p class="text-xs text-slate-400 dark:text-slate-500">© <span id="year"></span> KioscoPro · Hecho con <i data-lucide="heart" class="inline h-3.5 w-3.5 fill-rose-500 text-rose-500"></i> para pequeños comercios.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ CARRITO MÓVIL (DRAWER) ============ -->
+  <div id="cartOverlay" class="fixed inset-0 z-50 hidden lg:hidden">
+    <div id="cartBackdrop" class="modal-backdrop absolute inset-0 bg-slate-950/50"></div>
+    <div id="cartDrawer" class="absolute bottom-0 left-0 right-0 max-h-[88vh] translate-y-full overflow-hidden rounded-t-3xl border-t border-slate-200 bg-white shadow-2xl transition-transform duration-300 dark:border-white/10 dark:bg-slate-900">
+      <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-white/10">
+        <div class="flex items-center gap-2 font-extrabold"><i data-lucide="receipt" class="h-5 w-5 text-brand-500"></i> Cuenta del día</div>
+        <div class="flex items-center gap-3">
+          <button id="clearCartMobile" class="text-xs font-semibold text-slate-400 hover:text-rose-500">Vaciar</button>
+          <button id="closeCart" class="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"><i data-lucide="x" class="h-5 w-5"></i></button>
+        </div>
+      </div>
+      <div id="cartListMobile" class="max-h-[46vh] overflow-y-auto px-5 py-2"></div>
+      <div class="border-t border-slate-100 px-5 py-4 dark:border-white/10">
+        <div class="mb-1 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+          <span>Artículos</span><span id="cartCountMobile">0</span>
+        </div>
+        <div class="mb-4 flex items-end justify-between">
+          <span class="text-sm font-semibold">Total</span>
+          <span id="cartTotalMobile" class="text-2xl font-extrabold text-gradient">$ 0</span>
+        </div>
+        <button id="checkoutBtnMobile" class="flex w-full items-center justify-center gap-2 rounded-2xl brand-gradient py-3.5 text-sm font-bold text-white shadow-glow transition active:scale-95 disabled:opacity-40">
+          <i data-lucide="check-circle-2" class="h-5 w-5"></i> Cobrar venta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: PRODUCTO ============ -->
+  <div id="productModal" class="fixed inset-0 z-[60] hidden">
+    <div class="modal-backdrop absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-close="productModal"></div>
+    <div class="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 animate-popIn">
+      <div class="overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:bg-slate-900">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-2xl brand-gradient text-white"><i data-lucide="package-plus" class="h-5 w-5"></i></div>
+            <div>
+              <h3 id="productModalTitle" class="text-lg font-extrabold">Agregar producto</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Completá los datos del artículo</p>
+            </div>
+          </div>
+          <button class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-white/10 dark:text-slate-300" data-close="productModal">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+
+        <form id="productForm" class="px-6 py-6">
+          <input type="hidden" id="productId" />
+          <div class="flex flex-col gap-5 sm:flex-row">
+            <div class="sm:w-40">
+              <label class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">Imagen</label>
+              <label for="productImage" class="group relative flex aspect-square cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-brand-400 hover:bg-brand-50/50 dark:border-white/15 dark:bg-white/5 dark:hover:bg-brand-500/10">
+                <img id="imagePreview" class="hidden h-full w-full object-cover" alt="preview" />
+                <div id="imagePlaceholder" class="flex flex-col items-center gap-1 p-3 text-center text-slate-400">
+                  <i data-lucide="image-plus" class="h-7 w-7"></i>
+                  <span class="text-[11px] font-medium leading-tight">Subir foto<br>PNG · JPG · WEBP · GIF</span>
+                </div>
+              </label>
+              <input id="productImage" type="file" accept="image/*" class="hidden" />
+              <button type="button" id="removeImage" class="mt-2 hidden w-full rounded-xl bg-slate-100 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-500 dark:bg-white/10 dark:text-slate-300">Quitar imagen</button>
+            </div>
+
+            <div class="flex-1 space-y-4">
+              <div>
+                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-400">Nombre del producto</label>
+                <input id="productName" type="text" required placeholder="Ej: Gaseosa 1.5L"
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10" />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-400">Precio</label>
+                <div class="relative">
+                  <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">$</span>
+                  <input id="productPrice" type="number" min="0" step="0.01" required placeholder="0.00"
+                    class="w-full rounded-2xl border border-slate-200 bg-slate-50/60 py-3 pl-8 pr-4 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-7 flex gap-3">
+            <button type="button" data-close="productModal" class="flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">Cancelar</button>
+            <button type="submit" class="flex flex-1 items-center justify-center gap-2 rounded-2xl brand-gradient py-3 text-sm font-bold text-white shadow-glow transition hover:scale-[1.02] active:scale-95">
+              <i data-lucide="save" class="h-5 w-5"></i> Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: TOP VENTAS ============ -->
+  <div id="topModal" class="fixed inset-0 z-[60] hidden">
+    <div class="modal-backdrop absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-close="topModal"></div>
+    <div class="absolute left-1/2 top-1/2 w-[92vw] max-w-xl -translate-x-1/2 -translate-y-1/2 animate-popIn">
+      <div class="overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:bg-slate-900">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-amber-500/15 text-amber-500"><i data-lucide="trophy" class="h-5 w-5"></i></div>
+            <div>
+              <h3 class="text-lg font-extrabold">Desglose de Ventas</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Qué fue lo que más se vendió</p>
+            </div>
+          </div>
+          <button class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300" data-close="topModal"><i data-lucide="x" class="h-5 w-5"></i></button>
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto px-6 py-5">
+          <div id="topProductHighlight" class="mb-5 hidden rounded-2xl brand-gradient p-5 text-white shadow-glow">
+            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-90"><i data-lucide="star" class="h-4 w-4"></i> Producto estrella</div>
+            <div class="mt-2 flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p id="highlightName" class="truncate text-xl font-extrabold">—</p>
+                <p id="highlightStats" class="text-sm opacity-90">—</p>
+              </div>
+              <div class="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/20">
+                <img id="highlightImage" class="hidden h-full w-full object-cover" alt="" />
+                <i id="highlightIcon" data-lucide="crown" class="h-7 w-7"></i>
+              </div>
+            </div>
+          </div>
+          <div id="topTable" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: CERRAR CAJA ============ -->
+  <div id="closeDayModal" class="fixed inset-0 z-[60] hidden">
+    <div class="modal-backdrop absolute inset-0 bg-slate-950/60 backdrop-blur-sm" data-close="closeDayModal"></div>
+    <div class="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 animate-popIn">
+      <div class="overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:bg-slate-900">
+        <div class="relative overflow-hidden brand-gradient px-6 py-7 text-center text-white">
+          <div class="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-full bg-white/20 animate-floaty"><i data-lucide="badge-check" class="h-8 w-8"></i></div>
+          <h3 class="text-xl font-extrabold">Resumen del día</h3>
+          <p id="closeDayDate" class="text-sm opacity-90"></p>
+        </div>
+        <div class="px-6 py-6">
+          <div class="mb-4 rounded-2xl bg-slate-50 p-5 text-center dark:bg-white/5">
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Ganancia total de la jornada</p>
+            <p id="closeDayTotal" class="mt-1 text-4xl font-extrabold text-gradient">$ 0</p>
+            <p id="closeDayCount" class="mt-1 text-sm text-slate-500 dark:text-slate-400"></p>
+          </div>
+          <p id="closeDayEmpty" class="hidden text-center text-sm text-slate-400">Aún no registraste ventas hoy. ¡A vender!</p>
+          <div class="flex gap-3">
+            <button data-close="closeDayModal" class="flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">Seguir vendiendo</button>
+            <button id="confirmCloseDay" class="flex-1 rounded-2xl brand-gradient py-3 text-sm font-bold text-white shadow-glow transition hover:scale-[1.02] active:scale-95">Finalizar día</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TOASTS ============ -->
+  <div id="toastContainer" class="fixed bottom-4 left-1/2 z-[80] flex w-[92vw] max-w-sm -translate-x-1/2 flex-col gap-2 sm:bottom-6 sm:left-auto sm:right-6 sm:translate-x-0"></div>
+
+  <script>
+  /* =========================================================
+     KioscoPro — Lógica de la aplicación
+     Persistencia: localStorage (clave kioscopro_state_v1)
+     ========================================================= */
+  (function () {
+    'use strict';
+
+    const STORAGE_KEY = 'kioscopro_state_v1';
+
+    const defaultState = {
+      products: [],
+      history: {},   // { 'YYYY-MM-DD': { revenue: Number, items: { [productId]: {name, price, qty, image} } } }
+      cart: [],      // [ {id, name, price, image, qty} ]
+      theme: 'light'
+    };
+
+    let state = load();
+    let chart = null;
+    let currentView = 'pos';
+    let pendingImage = null;   // dataURL de la imagen seleccionada en el modal
+    let editingId = null;
+
+    /* ---------- Utilidades ---------- */
+    const $ = (sel) => document.querySelector(sel);
+
+    function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return Object.assign(clone(defaultState), parsed, {
+            products: parsed.products || [],
+            history: parsed.history || {},
+            cart: parsed.cart || []
+          });
+        }
+      } catch (e) { console.warn('No se pudo cargar el estado', e); }
+      return clone(defaultState);
+    }
+
+    let saveTimer = null;
+    function save(immediate) {
+      const doSave = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn('No se pudo guardar', e); } };
+      if (immediate) { doSave(); return; }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(doSave, 120);
+    }
+
+    function fmt(n) {
+      return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(Number(n) || 0);
+    }
+
+    function todayKey() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function keyToDate(key) {
+      const [y, m, d] = key.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function prettyDate(key) {
+      return keyToDate(key).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function refreshIcons() { if (window.lucide) window.lucide.createIcons(); }
+
+    /* ---------- Toasts ---------- */
+    function toast(message, type) {
+      type = type || 'success';
+      const styles = {
+        success: { bg: 'bg-emerald-500', icon: 'check-circle-2' },
+        error:   { bg: 'bg-rose-500',    icon: 'alert-circle' },
+        info:    { bg: 'bg-brand-600',   icon: 'info' },
+        warning: { bg: 'bg-amber-500',   icon: 'alert-triangle' }
+      };
+      const s = styles[type] || styles.success;
+      const el = document.createElement('div');
+      el.className = 'animate-slideUp flex items-center gap-3 rounded-2xl ' + s.bg + ' px-4 py-3 text-sm font-semibold text-white shadow-2xl';
+      el.innerHTML = '<i data-lucide="' + s.icon + '" class="h-5 w-5 shrink-0"></i><span class="flex-1">' + escapeHtml(message) + '</span>';
+      $('#toastContainer').appendChild(el);
+      refreshIcons();
+      setTimeout(() => {
+        el.style.transition = 'opacity .3s, transform .3s';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        setTimeout(() => el.remove(), 320);
+      }, 2600);
+    }
+
+    /* ---------- Tema ---------- */
+    function applyTheme() {
+      const dark = state.theme === 'dark';
+      document.documentElement.classList.toggle('dark', dark);
+      const icon = $('#themeIcon');
+      if (icon) { icon.setAttribute('data-lucide', dark ? 'sun' : 'moon'); }
+      refreshIcons();
+      if (chart) updateChartColors();
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      save(true);
+    }
+
+    /* =========================================================
+       NAVEGACIÓN
+       ========================================================= */
+    const navButtons = () => document.querySelectorAll('.nav-btn, .nav-btn-m');
+
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
+      const target = document.getElementById('view-' + view);
+      if (target) { target.classList.remove('hidden'); target.classList.add('animate-fadeIn'); }
+
+      navButtons().forEach((btn) => {
+        const active = btn.getAttribute('data-nav') === view;
+        btn.classList.toggle('brand-gradient', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('shadow-glow', active);
+        btn.classList.toggle('text-slate-500', !active);
+        btn.classList.toggle('dark:text-slate-400', !active);
+        btn.classList.toggle('hover:bg-slate-100', !active);
+        btn.classList.toggle('dark:hover:bg-white/10', !active);
+      });
+
+      if (view === 'stats') { renderStats(); setTimeout(renderChart, 60); }
+      if (view === 'pos') renderPOS();
+      if (view === 'products') renderCatalog();
+    }
+
+    /* =========================================================
+       PRODUCTOS
+       ========================================================= */
+    function renderPOS() {
+      const grid = $('#posGrid');
+      const q = ($('#posSearch').value || '').toLowerCase().trim();
+      const list = state.products.filter((p) => p.name.toLowerCase().includes(q));
+
+      if (state.products.length === 0) {
+        grid.innerHTML = emptyState('Aún no hay productos', 'Agregá tu primer producto para empezar a vender.', 'package-plus');
+        grid.className = 'grid grid-cols-1 gap-4';
+        $('#posAddProductBtn').classList.remove('hidden');
+        refreshIcons();
+        return;
+      }
+
+      if (list.length === 0) {
+        grid.innerHTML = emptyState('Sin resultados', 'No encontramos productos que coincidan con "' + escapeHtml(q) + '".', 'search-x');
+        grid.className = 'grid grid-cols-1 gap-4';
+        refreshIcons();
+        return;
+      }
+
+      grid.className = 'grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4';
+      grid.innerHTML = list.map((p) => productCard(p, 'pos')).join('');
+      refreshIcons();
+    }
+
+    function productCard(p, mode) {
+      const img = p.image
+        ? '<img src="' + p.image + '" alt="' + escapeHtml(p.name) + '" class="h-full w-full object-cover transition duration-500 group-hover:scale-110" />'
+        : '<div class="grid h-full w-full place-items-center text-slate-300 dark:text-slate-600"><i data-lucide="package" class="h-10 w-10"></i></div>';
+
+      const footer = mode === 'pos'
+        ? '<span class="flex items-center gap-1 rounded-full brand-gradient px-3 py-1.5 text-xs font-bold text-white opacity-0 transition group-hover:opacity-100"><i data-lucide="plus" class="h-3.5 w-3.5"></i> Vender</span>'
+        : '<div class="flex items-center gap-1">' +
+            '<button data-edit="' + p.id + '" class="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500 transition hover:bg-brand-500/10 hover:text-brand-600 dark:bg-white/10 dark:text-slate-300" title="Editar"><i data-lucide="pencil" class="h-4 w-4"></i></button>' +
+            '<button data-del="' + p.id + '" class="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-500 dark:bg-white/10 dark:text-slate-300" title="Eliminar"><i data-lucide="trash-2" class="h-4 w-4"></i></button>' +
+          '</div>';
+
+      const action = mode === 'pos'
+        ? 'data-sell="' + p.id + '"'
+        : '';
+
+      return (
+        '<article class="group card-hover relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 p-3 shadow-soft hover:shadow-glow dark:border-white/10 dark:bg-white/5" ' + action + '>' +
+          '<div class="relative mb-3 aspect-square overflow-hidden rounded-2xl bg-slate-100 dark:bg-white/5">' + img +
+            '<span class="absolute left-2 top-2 rounded-full bg-white/85 px-2.5 py-1 text-xs font-extrabold text-slate-700 backdrop-blur dark:bg-slate-900/80 dark:text-white">' + fmt(p.price) + '</span>' +
+          '</div>' +
+          '<div class="flex items-center justify-between gap-2">' +
+            '<h4 class="min-w-0 flex-1 truncate text-sm font-bold" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</h4>' +
+            footer +
+          '</div>' +
+        '</article>'
+      );
+    }
+
+    function emptyState(title, subtitle, icon) {
+      return '<div class="col-span-full flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 px-6 py-16 text-center dark:border-white/10 dark:bg-white/5">' +
+        '<div class="mb-4 grid h-16 w-16 place-items-center rounded-2xl brand-gradient text-white shadow-glow"><i data-lucide="' + icon + '" class="h-8 w-8"></i></div>' +
+        '<h3 class="text-lg font-extrabold">' + escapeHtml(title) + '</h3>' +
+        '<p class="mt-1 max-w-xs text-sm text-slate-500 dark:text-slate-400">' + subtitle + '</p>' +
+        '<button data-open-add class="mt-5 flex items-center gap-2 rounded-2xl brand-gradient px-5 py-3 text-sm font-bold text-white shadow-glow transition hover:scale-105"><i data-lucide="plus" class="h-4 w-4"></i> Agregar producto</button>' +
+      '</div>';
+    }
+
+    function renderCatalog() {
+      const grid = $('#productsGrid');
+      renderCatalogStats();
+
+      if (state.products.length === 0) {
+        grid.innerHTML = emptyState('Tu catálogo está vacío', 'Agregá productos para verlos reflejados aquí y en el punto de venta.', 'package-search');
+        grid.className = 'grid grid-cols-1 gap-4';
+        refreshIcons();
+        return;
+      }
+      grid.className = 'grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4';
+      grid.innerHTML = state.products.map((p) => productCard(p, 'catalog')).join('');
+      refreshIcons();
+    }
+
+    function renderCatalogStats() {
+      const n = state.products.length;
+      $('#statProductsCount').textContent = n;
+      if (n === 0) {
+        $('#statAvgPrice').textContent = '$ 0';
+        $('#statMaxPrice').textContent = '$ 0';
+        $('#statTopProduct').textContent = '—';
+        return;
+      }
+      const prices = state.products.map((p) => Number(p.price) || 0);
+      const avg = prices.reduce((a, b) => a + b, 0) / n;
+      const max = Math.max.apply(null, prices);
+      $('#statAvgPrice').textContent = fmt(avg);
+      $('#statMaxPrice').textContent = fmt(max);
+
+      const top = aggregatedItems();
+      $('#statTopProduct').textContent = top.length ? top[0].name : '— sin ventas';
+    }
+
+    /* =========================================================
+       MODAL PRODUCTO
+       ========================================================= */
+    function openProductModal(product) {
+      editingId = product ? product.id : null;
+      pendingImage = product ? (product.image || null) : null;
+      $('#productModalTitle').textContent = product ? 'Editar producto' : 'Agregar producto';
+      $('#productForm').reset();
+      $('#productId').value = product ? product.id : '';
+      $('#productName').value = product ? product.name : '';
+      $('#productPrice').value = product ? product.price : '';
+
+      if (pendingImage) {
+        $('#imagePreview').src = pendingImage;
+        $('#imagePreview').classList.remove('hidden');
+        $('#imagePlaceholder').classList.add('hidden');
+        $('#removeImage').classList.remove('hidden');
+      } else {
+        clearPreview();
+      }
+      showModal('productModal');
+      setTimeout(() => $('#productName').focus(), 120);
+    }
+
+    function clearPreview() {
+      $('#imagePreview').classList.add('hidden');
+      $('#imagePreview').removeAttribute('src');
+      $('#imagePlaceholder').classList.remove('hidden');
+      $('#removeImage').classList.add('hidden');
+    }
+
+    function handleImageFile(file) {
+      if (!file) return;
+      if (!file.type || file.type.indexOf('image/') !== 0) {
+        toast('El archivo debe ser una imagen válida', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pendingImage = ev.target.result;
+        $('#imagePreview').src = pendingImage;
+        $('#imagePreview').classList.remove('hidden');
+        $('#imagePlaceholder').classList.add('hidden');
+        $('#removeImage').classList.remove('hidden');
+      };
+      reader.onerror = () => toast('No se pudo leer la imagen', 'error');
+      reader.readAsDataURL(file);
+    }
+
+    function saveProduct(e) {
+      e.preventDefault();
+      const name = $('#productName').value.trim();
+      const price = parseFloat($('#productPrice').value);
+
+      if (!name) { toast('Ingresá un nombre de producto', 'warning'); return; }
+      if (isNaN(price) || price < 0) { toast('Ingresá un precio válido', 'warning'); return; }
+
+      if (editingId) {
+        const p = state.products.find((x) => x.id === editingId);
+        if (p) { p.name = name; p.price = price; p.image = pendingImage; }
+        toast('Producto actualizado', 'success');
+      } else {
+        state.products.push({ id: uid(), name: name, price: price, image: pendingImage, createdAt: Date.now() });
+        toast('Producto agregado al catálogo', 'success');
+      }
+
+      save(true);
+      hideModal('productModal');
+      editingId = null;
+      pendingImage = null;
+      renderPOS();
+      renderCatalog();
+    }
+
+    function deleteProduct(id) {
+      const p = state.products.find((x) => x.id === id);
+      if (!p) return;
+      if (!confirm('¿Eliminar "' + p.name + '" del catálogo? Las ventas ya registradas se conservan.')) return;
+      state.products = state.products.filter((x) => x.id !== id);
+      state.cart = state.cart.filter((c) => c.id !== id);
+      save(true);
+      renderPOS();
+      renderCatalog();
+      renderCart();
+      toast('Producto eliminado', 'info');
+    }
+
+    /* =========================================================
+       CARRITO / VENTAS
+       ========================================================= */
+    function addToCart(id, btn) {
+      const p = state.products.find((x) => x.id === id);
+      if (!p) return;
+      const item = state.cart.find((c) => c.id === id);
+      if (item) item.qty += 1;
+      else state.cart.push({ id: p.id, name: p.name, price: Number(p.price) || 0, image: p.image || null, qty: 1 });
+
+      save();
+      renderCart();
+
+      if (btn) { btn.classList.remove('animate-bounceAdd'); void btn.offsetWidth; btn.classList.add('animate-bounceAdd'); }
+      toast('Añadido: ' + p.name, 'success');
+    }
+
+    function changeQty(id, delta) {
+      const item = state.cart.find((c) => c.id === id);
+      if (!item) return;
+      item.qty += delta;
+      if (item.qty <= 0) state.cart = state.cart.filter((c) => c.id !== id);
+      save();
+      renderCart();
+    }
+
+    function cartTotal() { return state.cart.reduce((sum, i) => sum + i.price * i.qty, 0); }
+    function cartCount() { return state.cart.reduce((sum, i) => sum + i.qty, 0); }
+
+    function renderCart() {
+      const total = cartTotal();
+      const count = cartCount();
+
+      $('#cartTotalDesktop').textContent = fmt(total);
+      $('#cartCountDesktop').textContent = count + (count === 1 ? ' ítem' : ' ítems');
+      $('#cartTotalMobile').textContent = fmt(total);
+      $('#cartCountMobile').textContent = count + (count === 1 ? ' ítem' : ' ítems');
+      $('#headerTodayTotal').textContent = fmt(todayRevenue() + total);
+
+      $('#checkoutBtn').disabled = count === 0;
+      $('#checkoutBtnMobile').disabled = count === 0;
+
+      const badge = $('#cartBadgeMobile');
+      if (count > 0) { badge.textContent = count; badge.classList.remove('hidden'); }
+      else badge.classList.add('hidden');
+
+      const html = state.cart.length
+        ? state.cart.map(cartRow).join('')
+        : '<div class="flex flex-col items-center gap-2 py-10 text-center text-slate-400"><i data-lucide="shopping-cart" class="h-9 w-9"></i><p class="text-sm">Tu cuenta está vacía</p><p class="text-xs">Tocá un producto para agregarlo</p></div>';
+
+      $('#cartListDesktop').innerHTML = html;
+      $('#cartListMobile').innerHTML = html;
+      refreshIcons();
+    }
+
+    function cartRow(item) {
+      const thumb = item.image
+        ? '<img src="' + item.image + '" class="h-full w-full object-cover" alt="" />'
+        : '<div class="grid h-full w-full place-items-center text-slate-300 dark:text-slate-600"><i data-lucide="package" class="h-5 w-5"></i></div>';
+      return (
+        '<div class="flex items-center gap-3 border-b border-slate-100 py-3 last:border-0 dark:border-white/10">' +
+          '<div class="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-white/5">' + thumb + '</div>' +
+          '<div class="min-w-0 flex-1">' +
+            '<p class="truncate text-sm font-bold">' + escapeHtml(item.name) + '</p>' +
+            '<p class="text-xs text-slate-500 dark:text-slate-400">' + fmt(item.price) + ' c/u</p>' +
+          '</div>' +
+          '<div class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/10">' +
+            '<button data-minus="' + item.id + '" class="grid h-7 w-7 place-items-center rounded-lg bg-white text-slate-600 shadow-sm transition hover:text-rose-500 dark:bg-white/10 dark:text-slate-200"><i data-lucide="minus" class="h-3.5 w-3.5"></i></button>' +
+            '<span class="w-6 text-center text-sm font-extrabold">' + item.qty + '</span>' +
+            '<button data-plus="' + item.id + '" class="grid h-7 w-7 place-items-center rounded-lg bg-white text-slate-600 shadow-sm transition hover:text-brand-600 dark:bg-white/10 dark:text-slate-200"><i data-lucide="plus" class="h-3.5 w-3.5"></i></button>' +
+          '</div>' +
+          '<div class="w-20 shrink-0 text-right text-sm font-extrabold text-gradient">' + fmt(item.price * item.qty) + '</div>' +
+        '</div>'
+      );
+    }
+
+    function clearCart() {
+      if (state.cart.length === 0) return;
+      state.cart = [];
+      save(true);
+      renderCart();
+      toast('Cuenta vaciada', 'info');
+    }
+
+    function checkout() {
+      if (state.cart.length === 0) { toast('La cuenta está vacía', 'warning'); return; }
+      const total = cartTotal();
+      const key = todayKey();
+      const day = state.history[key] || { revenue: 0, items: {} };
+
+      state.cart.forEach((c) => {
+        const it = day.items[c.id] || { name: c.name, price: c.price, qty: 0, image: c.image };
+        it.name = c.name; it.price = c.price; it.image = c.image;
+        it.qty += c.qty;
+        day.items[c.id] = it;
+      });
+      day.revenue += total;
+      state.history[key] = day;
+
+      const count = cartCount();
+      state.cart = [];
+      save(true);
+      renderCart();
+      updateHeaderAndStats();
+      if (currentView === 'stats') renderStats();
+
+      toast('¡Venta cobrada! ' + count + ' ítems · ' + fmt(total), 'success');
+      openCloseDayModal();
+    }
+
+    function todayRevenue() { const d = state.history[todayKey()]; return d ? d.revenue : 0; }
+
+    /* =========================================================
+       ESTADÍSTICAS
+       ========================================================= */
+    function lastNDays(n) {
+      const days = [];
+      const base = new Date();
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i);
+        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        days.push({ key: key, date: d, revenue: state.history[key] ? state.history[key].revenue : 0 });
+      }
+      return days;
+    }
+
+    function aggregatedItems() {
+      const map = {};
+      Object.values(state.history).forEach((day) => {
+        Object.entries(day.items || {}).forEach(([id, it]) => {
+          if (!map[id]) map[id] = { id: id, name: it.name, price: it.price, image: it.image, qty: 0, revenue: 0 };
+          map[id].qty += it.qty;
+          map[id].revenue += it.qty * (Number(it.price) || 0);
+          if (it.name) map[id].name = it.name;
+        });
+      });
+      return Object.values(map).sort((a, b) => b.qty - a.qty);
+    }
+
+    function renderStats() {
+      const todayRev = todayRevenue();
+      const totalRev = Object.values(state.history).reduce((s, d) => s + (d.revenue || 0), 0);
+      const daysWithSales = Object.keys(state.history).filter((k) => state.history[k].revenue > 0);
+      const avg = daysWithSales.length ? totalRev / daysWithSales.length : 0;
+
+      $('#statTodayRevenue').textContent = fmt(todayRev);
+      $('#statTotalRevenue').textContent = fmt(totalRev);
+      $('#statAvgDay').textContent = fmt(avg);
+
+      let bestKey = null, bestRev = 0;
+      Object.entries(state.history).forEach(([k, v]) => { if (v.revenue > bestRev) { bestRev = v.revenue; bestKey = k; } });
+      $('#statBestDay').textContent = bestKey ? fmt(bestRev) : '—';
+
+      renderTopMini();
+      renderTopModalContent();
+    }
+
+    function renderTopMini() {
+      const items = aggregatedItems().slice(0, 5);
+      const box = $('#topProductsMini');
+      if (!items.length) {
+        box.innerHTML = '<div class="flex flex-col items-center gap-2 py-10 text-center text-slate-400"><i data-lucide="flame" class="h-9 w-9"></i><p class="text-sm">Todavía no hay ventas registradas</p></div>';
+        refreshIcons();
+        return;
+      }
+      const max = items[0].qty || 1;
+      box.innerHTML = items.map((it, i) => {
+        const pct = Math.round((it.qty / max) * 100);
+        const medal = ['bg-amber-400', 'bg-slate-300', 'bg-orange-400'][i] || 'bg-brand-500';
+        const thumb = it.image
+          ? '<img src="' + it.image + '" class="h-full w-full object-cover" alt="" />'
+          : '<div class="grid h-full w-full place-items-center text-slate-300 dark:text-slate-600"><i data-lucide="package" class="h-4 w-4"></i></div>';
+        return '<div class="flex items-center gap-3">' +
+            '<div class="grid h-6 w-6 shrink-0 place-items-center rounded-lg ' + (i < 3 ? medal : 'bg-slate-200 dark:bg-white/10') + ' text-[11px] font-extrabold text-white">' + (i + 1) + '</div>' +
+            '<div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-white/5">' + thumb + '</div>' +
+            '<div class="min-w-0 flex-1">' +
+              '<div class="flex items-center justify-between gap-2"><p class="truncate text-sm font-bold">' + escapeHtml(it.name) + '</p><span class="shrink-0 text-xs font-bold text-slate-500 dark:text-slate-400">' + it.qty + ' u.</span></div>' +
+              '<div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div class="h-full brand-gradient" style="width:' + pct + '%"></div></div>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+      refreshIcons();
+    }
+
+    function renderTopModalContent() {
+      const items = aggregatedItems();
+      const highlight = $('#topProductHighlight');
+      if (!items.length) {
+        highlight.classList.add('hidden');
+        $('#topTable').innerHTML = '<div class="flex flex-col items-center gap-2 py-8 text-center text-slate-400"><i data-lucide="trophy" class="h-9 w-9"></i><p class="text-sm">Aún no hay datos de ventas.</p></div>';
+        refreshIcons();
+        return;
+      }
+      const top = items[0];
+      highlight.classList.remove('hidden');
+      $('#highlightName').textContent = top.name;
+      $('#highlightStats').textContent = top.qty + ' unidades vendidas · ' + fmt(top.revenue) + ' recaudados';
+      if (top.image) { $('#highlightImage').src = top.image; $('#highlightImage').classList.remove('hidden'); $('#highlightIcon').classList.add('hidden'); }
+      else { $('#highlightImage').classList.add('hidden'); $('#highlightIcon').classList.remove('hidden'); }
+
+      $('#topTable').innerHTML = items.map((it, i) => {
+        const thumb = it.image
+          ? '<img src="' + it.image + '" class="h-full w-full object-cover" alt="" />'
+          : '<div class="grid h-full w-full place-items-center text-slate-300 dark:text-slate-600"><i data-lucide="package" class="h-4 w-4"></i></div>';
+        return '<div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">' +
+            '<span class="w-6 text-center text-sm font-extrabold text-slate-400">' + (i + 1) + '</span>' +
+            '<div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-white/5">' + thumb + '</div>' +
+            '<div class="min-w-0 flex-1"><p class="truncate text-sm font-bold">' + escapeHtml(it.name) + '</p><p class="text-xs text-slate-500 dark:text-slate-400">' + fmt(it.price) + ' c/u</p></div>' +
+            '<div class="text-right"><p class="text-sm font-extrabold">' + it.qty + ' u.</p><p class="text-xs text-gradient font-bold">' + fmt(it.revenue) + '</p></div>' +
+          '</div>';
+      }).join('');
+      refreshIcons();
+    }
+
+    /* ---------- Gráfico ---------- */
+    function chartColors() {
+      const dark = document.documentElement.classList.contains('dark');
+      return {
+        grid: dark ? 'rgba(255,255,255,.07)' : 'rgba(15,23,42,.06)',
+        ticks: dark ? '#94a3b8' : '#64748b',
+        line: dark ? '#a5b4fc' : '#6366f1'
+      };
+    }
+
+    function renderChart() {
+      const canvas = $('#salesChart');
+      if (!canvas) return;
+      const days = lastNDays(7);
+      const c = chartColors();
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 300);
+      grad.addColorStop(0, 'rgba(139,92,246,.45)');
+      grad.addColorStop(1, 'rgba(99,102,241,0)');
+
+      const data = {
+        labels: days.map((d) => d.date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })),
+        datasets: [{
+          label: 'Ganancia',
+          data: days.map((d) => d.revenue),
+          borderColor: c.line,
+          backgroundColor: grad,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: c.line,
+          pointBorderWidth: 3
+        }]
+      };
+
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15,23,42,.92)',
+            padding: 12,
+            cornerRadius: 12,
+            titleFont: { weight: '700' },
+            callbacks: { label: (ctx) => ' ' + fmt(ctx.parsed.y) }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: c.grid, drawBorder: false },
+            ticks: { color: c.ticks, callback: (v) => '$' + (v >= 1000 ? (v / 1000) + 'k' : v), font: { weight: '600' } }
+          },
+          x: { grid: { display: false }, ticks: { color: c.ticks, font: { weight: '600' } } }
+        }
+      };
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, { type: 'line', data: data, options: options });
+    }
+
+    function updateChartColors() {
+      if (!chart) return;
+      const c = chartColors();
+      chart.data.datasets[0].borderColor = c.line;
+      chart.data.datasets[0].pointBorderColor = c.line;
+      chart.options.scales.y.grid.color = c.grid;
+      chart.options.scales.y.ticks.color = c.ticks;
+      chart.options.scales.x.ticks.color = c.ticks;
+      chart.update();
+    }
+
+    function updateHeaderAndStats() {
+      $('#headerTodayTotal').textContent = fmt(todayRevenue() + cartTotal());
+      renderCatalogStats();
+      if (currentView === 'stats') renderStats();
+    }
+
+    /* =========================================================
+       CERRAR CAJA
+       ========================================================= */
+    function openCloseDayModal() {
+      const day = state.history[todayKey()];
+      const rev = day ? day.revenue : 0;
+      let count = 0;
+      if (day) Object.values(day.items).forEach((it) => count += it.qty);
+
+      $('#closeDayDate').textContent = prettyDate(todayKey());
+      $('#closeDayTotal').textContent = fmt(rev);
+      $('#closeDayCount').textContent = count + (count === 1 ? ' artículo vendido hoy' : ' artículos vendidos hoy');
+      $('#closeDayEmpty').classList.toggle('hidden', rev > 0);
+      showModal('closeDayModal');
+    }
+
+    /* =========================================================
+       MODALES HELPERS
+       ========================================================= */
+    function showModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function hideModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function openCartDrawer() {
+      $('#cartOverlay').classList.remove('hidden');
+      requestAnimationFrame(() => { $('#cartDrawer').classList.remove('translate-y-full'); });
+    }
+
+    function closeCartDrawer() {
+      $('#cartDrawer').classList.add('translate-y-full');
+      setTimeout(() => $('#cartOverlay').classList.add('hidden'), 300);
+    }
+
+    /* =========================================================
+       EVENTOS
+       ========================================================= */
+    function bindEvents() {
+      // Navegación
+      navButtons().forEach((btn) => btn.addEventListener('click', () => switchView(btn.getAttribute('data-nav'))));
+
+      // Tema
+      $('#themeToggle').addEventListener('click', toggleTheme);
+
+      // Buscar
+      $('#posSearch').addEventListener('input', renderPOS);
+
+      // Abrir agregar producto
+      $('#openAddProduct').addEventListener('click', () => openProductModal(null));
+      $('#posAddProductBtn').addEventListener('click', () => openProductModal(null));
+
+      // Delegación: vender / editar / eliminar / abrir-add
+      document.addEventListener('click', (e) => {
+        const sell = e.target.closest('[data-sell]');
+        if (sell) { addToCart(sell.getAttribute('data-sell'), sell); return; }
+        const edit = e.target.closest('[data-edit]');
+        if (edit) { const p = state.products.find((x) => x.id === edit.getAttribute('data-edit')); if (p) openProductModal(p); return; }
+        const del = e.target.closest('[data-del]');
+        if (del) { deleteProduct(del.getAttribute('data-del')); return; }
+        const openAdd = e.target.closest('[data-open-add]');
+        if (openAdd) { openProductModal(null); return; }
+        const minus = e.target.closest('[data-minus]');
+        if (minus) { changeQty(minus.getAttribute('data-minus'), -1); return; }
+        const plus = e.target.closest('[data-plus]');
+        if (plus) { changeQty(plus.getAttribute('data-plus'), 1); return; }
+      });
+
+      // Cerrar modales
+      document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => hideModal(b.getAttribute('data-close'))));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          ['productModal', 'topModal', 'closeDayModal'].forEach((m) => { if (!document.getElementById(m).classList.contains('hidden')) hideModal(m); });
+          if (!$('#cartOverlay').classList.contains('hidden')) closeCartDrawer();
+        }
+      });
+
+      // Form producto
+      $('#productForm').addEventListener('submit', saveProduct);
+      $('#productImage').addEventListener('change', (e) => handleImageFile(e.target.files[0]));
+      $('#removeImage').addEventListener('click', () => { pendingImage = null; $('#productImage').value = ''; clearPreview(); });
+
+      // Carrito
+      $('#checkoutBtn').addEventListener('click', checkout);
+      $('#checkoutBtnMobile').addEventListener('click', () => { checkout(); closeCartDrawer(); });
+      $('#clearCartDesktop').addEventListener('click', clearCart);
+      $('#clearCartMobile').addEventListener('click', clearCart);
+
+      // Drawer móvil
+      $('#openCartMobile').addEventListener('click', openCartDrawer);
+      $('#closeCart').addEventListener('click', closeCartDrawer);
+      $('#cartBackdrop').addEventListener('click', closeCartDrawer);
+
+      // Top ventas
+      $('#openTopModal').addEventListener('click', () => showModal('topModal'));
+
+      // Cerrar caja
+      $('#confirmCloseDay').addEventListener('click', () => {
+        hideModal('closeDayModal');
+        toast('Día finalizado. ¡Buen trabajo!', 'success');
+        if (currentView === 'stats') renderStats();
+      });
+
+      // Atajos teclado
+      document.addEventListener('keydown', (e) => {
+        if (e.target.matches('input, textarea')) return;
+        if (e.key === 'n' || e.key === 'N') { openProductModal(null); }
+      });
+    }
+
+    /* =========================================================
+       INIT
+       ========================================================= */
+    function init() {
+      $('#year').textContent = new Date().getFullYear();
+      applyTheme();
+      bindEvents();
+      switchView('pos');
+      renderCart();
+      renderStats();
+      renderCatalogStats();
+      refreshIcons();
+
+      // Re-render del gráfico al ganar foco la ventana (por si cambió el tema del sistema)
+      window.addEventListener('focus', () => { if (currentView === 'stats' && chart) renderChart(); });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+  </script>
+</body>
+</html>
